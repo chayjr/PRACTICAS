@@ -1,0 +1,69 @@
+from flask import Flask, render_template,request,redirect, url_for 
+import mysql.connector
+
+app = Flask(__name__)
+app.secret_key = "supersecretkey"  #Es pasa usar flash messages
+
+def get_db_connection():
+    return mysql.connector.connect(
+        host="localhost",
+        user="root",
+        password="",
+        database="formulario_bd"
+    )
+
+@app.route("/")
+def home():
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    cursor.execute("SELECT * FROM autosjdm")
+    miresultado = cursor.fetchall()
+    #Convertir los datos a diccionario
+    insertObject = []
+    columnNames = [column [0] for column in cursor.description]
+    for record in miresultado:
+        insertObject.append(dict(zip(columnNames, record)))
+    cursor.close()
+    conn.close()
+    return render_template("index.html", dato=insertObject)
+
+
+@app.route("/add", methods=["POST"])
+def add():
+    Marca = request.form["Marca"]
+    Modelo = request.form["Modelo"]
+    Anio = int(request.form["Anio"])  # Convertimos calificación a entero
+    Velocidad = request.form["VelMaxima"]
+    Motor = request.form["Motor"]
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    cursor.execute("INSERT INTO autosjdm (Marca, Modelo, Anio, VelMaxima, Motor) VALUES (%s, %s, %s, %s, %s)", (Marca, Modelo, Anio, Velocidad, Motor))
+    conn.commit()
+    cursor.close()
+    conn.close()
+    return redirect(url_for("home"))
+
+@app.route("/update/<int:id>", methods=["POST"])
+def update(id):
+    Marca = request.form["Marca"]
+    Modelo = request.form["Modelo"]
+    Anio = int(request.form["Anio"])  # Convertimos año a entero
+    Velocidad = request.form["VelMaxima"]
+    Motor = request.form["Motor"]
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    cursor.execute("UPDATE autosjdm SET Marca = %s, Modelo = %s, Anio = %s, VelMaxima = %s, Motor = %s WHERE id = %s", (Marca, Modelo, Anio, Velocidad, Motor, id))
+    conn.commit()
+    cursor.close()
+    conn.close()
+    return redirect(url_for("home"))
+
+@app.route("/delete/<int:id>")
+def delete(id):
+    conn = get_db_connection()
+    cursor = conn.cursor()
+    cursor.execute("DELETE FROM autosjdm WHERE id = %s", (id,))
+    conn.commit()
+    cursor.close()
+    conn.close()
+    return redirect(url_for("home"))
